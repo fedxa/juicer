@@ -77,7 +77,7 @@ juicer_version="1.5"
 #load_coreutils=""
 # Juicer directory, contains scripts/, references/, and restriction_sites/
 # can also be set in options via -D
-juiceDir="/opt/juicer"
+juiceDir="/home/fbezruko/juicer"
 # default queue, can also be set in options via -q
 queue="normal"
 # default queue time, can also be set in options via -Q
@@ -453,6 +453,7 @@ SPLITMV
 	bsub <<-CNTLIG
 	#!/bin/bash
 	#BSUB -q $queue
+	#BSUB -g /$groupname
 	#BSUB -W $queue_time
 	#BSUB -o $topDir/lsf.out
 	#BSUB -J "${groupname}${jname}_Count_Ligation"
@@ -471,9 +472,11 @@ CNTLIG
 	bsub <<- ALGNR1
 	#!/bin/bash
 	#BSUB -q $queue
+	#BSUB -g /$groupname
 	#BSUB -o $topDir/lsf.out
 	#BSUB -W $queue_time
 	#BSUB -M ${alloc_mem}000
+	#BSUB -n 16 -R "span[hosts=1]"
 	#BSUB -R "rusage[mem=$alloc_mem]"
 	#BSUB -J "${groupname}_align1${jname}"
 	# Align read1 
@@ -513,9 +516,11 @@ ALGNR1
 	bsub <<- ALGNR2
 	#!/bin/bash
 	#BSUB -q $queue
+	#BSUB -g /$groupname
 	#BSUB -o $topDir/lsf.out
 	#BSUB -W $queue_time	
 	#BSUB -M ${alloc_mem}000
+	#BSUB -n 16 -R "span[hosts=1]"
 	#BSUB -R "rusage[mem=$alloc_mem]"
 	#BSUB -J "${groupname}_align2${jname}"
 	# Align read2
@@ -548,6 +553,7 @@ ALGNR2
 	bsub <<- MRGALL
 	#!/bin/bash
 	#BSUB -q $long_queue
+	#BSUB -g /$groupname
 	#BSUB -W $long_queue_time
 	#BSUB -o $topDir/lsf.out
 	#BSUB -M 8000000
@@ -597,6 +603,7 @@ MRGALL
 	bsub <<- CHIMERIC
 	#!/bin/bash
 	#BSUB -q $queue
+	#BSUB -g /$groupname
 	#BSUB -W $queue_time
 	#BSUB -o $topDir/lsf.out
 	#BSUB -M 8000000
@@ -658,11 +665,12 @@ CHIMERIC
 	bsub <<- CLNFAIL
 	#!/bin/bash
 	#BSUB -q $queue
+	#BSUB -g /cleanup_$groupname
 	#BSUB -W $queue_time
 	#BSUB -o $topDir/lsf.out
 	#BSUB -w " ${ARRAY[i]} "
 	#BSUB -J "cleanup_${groupname}_${i}"
-	bkill -g ${groupname} 0
+	bkill -g /${groupname} 0
 CLNFAIL
     done
 
@@ -676,7 +684,7 @@ CLNFAIL
     #BSUB -o $topDir/lsf.out
     #BSUB -w " done(${groupname}_chimeric*) " 
     #BSUB -J "${groupname}_fragmerge1"
-    bkill -g ${groupname} 0
+    bkill -g /cleanup_${groupname} 0
 FNLKILL
 fi
 
@@ -687,6 +695,7 @@ then
     bsub <<- MRGSRT
     #!/bin/bash
     #BSUB -q $long_queue
+    #BSUB -g /$groupname
     #BSUB -W $long_queue_time
     #BSUB -o $topDir/lsf.out
     #BSUB -w " done(${groupname}_chimeric*) "
@@ -709,11 +718,12 @@ MRGSRT
     bsub <<- CLNDIE
     #!/bin/bash
     #BSUB -q $queue
+    #BSUB -g /cleanup3_$groupname
     #BSUB -W $queue_time
     #BSUB -o $topDir/lsf.out
     #BSUB -J "${groupname}_clean1"
     #BSUB -w " exit(${groupname}_fragmerge) "
-    bkill -g ${groupname} 0
+    bkill -g /${groupname} 0
 CLNDIE
 fi
 		
@@ -731,6 +741,7 @@ then
     bsub <<- KILLCLNUP
     #!/bin/bash
     #BSUB -q $queue
+    #BSUB -g /cleanup3_$groupname
     #BSUB -W $queue_time
     #BSUB -o $topDir/lsf.out
     ${waitstring}
@@ -749,7 +760,7 @@ KILLCLNUP
     #BSUB -o $topDir/lsf.out
     #BSUB -J "${groupname}_clean2"
     #BSUB -w " exit(${groupname}_osplit) "
-    bkill -g ${groupname} 0
+    bkill -g /cleanup3_${groupname} 0
 DIECLNRLNCH
 fi
 
@@ -778,6 +789,7 @@ then
 	bsub <<- DOSTAT
 	#!/bin/bash
 	#BSUB -q $queue
+	#BSUB -g /$groupname
 	#BSUB -W $queue_time
 	#BSUB -o $topDir/lsf.out
         ${waitstring2}
@@ -822,7 +834,7 @@ FINCLN1
     #BSUB -W $queue_time
     #BSUB -o $topDir/lsf.out
     $waitstring3
-    bsub -o $topDir/lsf.out -q $queue -W $queue_time $diefinal -J "${groupname}_clean3" "bkill -q $long_queue 0; bkill -g ${groupname} 0; bkill -q $queue 0;"
+    bsub -o $topDir/lsf.out -q $queue -W $queue_time $diefinal -J "${groupname}_clean3" "bkill -q $long_queue 0; bkill -g /${groupname} 0; bkill -q $queue 0;"
 DIEFINAL
 else
     ## LSF users change queue below to $queue
